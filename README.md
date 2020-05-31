@@ -17,9 +17,16 @@ Run the genmk.py  script to generate the Makefile and other required files
 
 Then, Run: make
 
+## Installing 
+
+On a FAT32 formatted SD Card, copy the resulting kernel.img file, and add two files from the raspberry pi [github repository](https://github.com/raspberrypi/firmware/tree/master/boot)
+
+*   bootcode.bin
+*   start.elf
+
 ## Connecting:
 
-On the pi-zero board, connect the uart on the three pins marked in the image below
+On the pi-zero board, connect the uart on the three pins marked in the image below.  With regards to power, figure out what works for you (GPIO or USB).
 
 ![Raspberry PI Zero UART](https://raw.githubusercontent.com/amirgeva/rpigpu/master/board.png)
 

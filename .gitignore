@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+
+Makefile
+kernel.img
+memory_map
+rpigpu.elf
+
+

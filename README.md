@@ -31,3 +31,6 @@ On the pi-zero board, connect the uart on the three pins marked in the image bel
 ![Raspberry PI Zero UART](https://raw.githubusercontent.com/amirgeva/rpigpu/master/board.png)
 
 
+## Acknowledgement:
+
+I'd like to thank David Welch for a lot of the hacking details in his fine [repository](https://github.com/dwelch67/raspberrypi-zero)

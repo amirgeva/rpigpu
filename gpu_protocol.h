@@ -126,6 +126,7 @@ namespace gpu {
   {
     uint8_t  opcode;
     uint16_t id;
+    Color    pixels[SPRITE_AREA];
   };
 
   struct Command_DrawSprite
@@ -202,7 +203,6 @@ namespace gpu {
       Command_SetSprite        set_sprite;
       Command_DrawSprite       draw_sprite;
       Command_TransparentColor transparent_color;
-      uint8_t             buffer[SPRITE_SIZE*SPRITE_SIZE*sizeof(Color) + sizeof(Command_SetSprite)];
     } Header;
 
     uint16_t get_header_len();

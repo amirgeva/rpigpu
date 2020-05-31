@@ -132,7 +132,6 @@ namespace gpu {
     {
     case CMD_HORZ_PIXELS: return Header.horz_pixels.n + sizeof(Command_HorzPixels) - m_Pos;
     case CMD_TEXT:        return Header.text.n + sizeof(Command_Text) - m_Pos;
-    case CMD_SET_SPRITE:  return SPRITE_SIZE * SPRITE_SIZE * sizeof(Color) + sizeof(Command_SetSprite) - m_Pos;
     }
     return 0;
   }

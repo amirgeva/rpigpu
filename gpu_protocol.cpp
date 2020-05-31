@@ -32,10 +32,12 @@ namespace gpu {
     m_Pos=0;
     m_BytesLeft=0;
     m_Blink=false;
+    m_Transparency=false;
     m_CursorX=0;
     m_CursorY=0;
     m_BGColor=0;
     m_FGColor=0xFFFF;
+    m_Transparent=(1 << 5);
     for(int i=0;i<64;++i)
     {
       m_Handlers[i]=nullptr;
@@ -61,6 +63,7 @@ namespace gpu {
     HANDLER(TEXT);
     HANDLER(SET_SPRITE);
     HANDLER(DRAW_SPRITE);
+    HANDLER(TRANSPARENT_COLOR);
     #undef HANDLER
 
     m_CommandSizes[CMD_NOP] = sizeof(Command);
@@ -81,11 +84,13 @@ namespace gpu {
     m_CommandSizes[CMD_BG_COLOR] = sizeof(Command_BGColor);
     m_CommandSizes[CMD_SET_SPRITE] = sizeof(Command_SetSprite);
     m_CommandSizes[CMD_DRAW_SPRITE] = sizeof(Command_DrawSprite);
+    m_CommandSizes[CMD_TRANSPARENT_COLOR] = sizeof(Command_TransparentColor);
   }
 
 
-  void Protocol::XorRect(int x, int y, int w, int h)
+  void Protocol::XorRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
   {
+    if ((x+w)>SCREEN_WIDTH || (y+h)>SCREEN_HEIGHT) return;
     for(int i=0;i<h;++i)
     {
       Color* row = get_frame_row(y+i) + x;
@@ -94,6 +99,11 @@ namespace gpu {
         row[j] = ~row[j];
       }
     }
+  }
+
+  void Protocol::draw_cursor()
+  {
+    XorRect(cursor_x, cursor_y, 8, 16);
   }
 
   void Protocol::erase_cursor()
@@ -105,7 +115,7 @@ namespace gpu {
       if (cursor_on)
       {
         cursor_on=false;
-        XorRect(cursor_x, cursor_y, 8, 8);
+        draw_cursor();
       }
     }
   }
@@ -131,15 +141,11 @@ namespace gpu {
   {
     if (Header.cmd.opcode>=64) 
     {
-      uart_print("Invalid command: ");
-      uart_print_hex(Header.cmd.opcode);
-      uart_println(" ");
       return false;
     }
     Handler h = m_Handlers[Header.cmd.opcode];
     if (!h)
     {
-      uart_println("Invalid handler");
       return false;
     }
     erase_cursor();
@@ -160,7 +166,7 @@ namespace gpu {
         cursor_on = !cursor_on;
         cursor_x = m_CursorX;
         cursor_y = m_CursorY;
-        XorRect(cursor_x, cursor_y, 8, 8);
+        draw_cursor();
         start = cur;
         flip_screen = true;
       }
@@ -194,16 +200,17 @@ namespace gpu {
 
   void Protocol::HandleNOP() 
   {
+    /*
     uart_print("Cursor: ");
     uart_print_hex_dword(m_CursorX);
     uart_print(" ");
     uart_print_hex_dword(m_CursorY);
     uart_println(" ");
+    */
   }
   
   void Protocol::HandleCLS() 
   {
-    uart_println("CLS");
     m_BGColor = 0;
     m_FGColor = 0xFFFF;
     m_CursorX = 0;
@@ -230,11 +237,6 @@ namespace gpu {
   {
     m_CursorX = Header.pixel_cursor.x;
     m_CursorY = Header.pixel_cursor.y;
-    uart_print("Cursor: ");
-    uart_print_hex(m_CursorX&255);
-    uart_print(" ");
-    uart_print_hex(m_CursorY&255);
-    uart_println(" ");
   }
 
   void Protocol::HandleTEXT_CURSOR()
@@ -270,7 +272,6 @@ namespace gpu {
 
   void Protocol::HandleFILL_RECT() 
   {
-    uart_println("Fill Rect");
     fill_rect(m_CursorX, m_CursorY,
               Header.fill_rect.w,Header.fill_rect.h,
               m_BGColor);
@@ -314,8 +315,10 @@ namespace gpu {
     }
   }
 
-  void DrawSprite(const Color* pixels, uint16_t srcx, uint16_t srcy, 
-                  uint16_t w, uint16_t h, uint16_t dstx, uint16_t dsty)
+  void DrawSprite(const Color* pixels,
+                  uint16_t srcx, uint16_t srcy, 
+                  uint16_t w, uint16_t h,
+                  uint16_t dstx, uint16_t dsty)
   {
     const Color* src = pixels+srcy*SPRITE_SIZE + srcx;
     for(uint16_t i=0;i<h;++i)
@@ -327,13 +330,37 @@ namespace gpu {
     }
   }
 
+  void DrawTransparentSprite(const Color* pixels, Color transparent,
+                             uint16_t srcx, uint16_t srcy, 
+                             uint16_t w, uint16_t h,
+                             uint16_t dstx, uint16_t dsty)
+  {
+    const Color* src = pixels+srcy*SPRITE_SIZE + srcx;
+    for(uint16_t i=0;i<h;++i)
+    {
+      Color* dst = get_frame_row(dsty+i)+dstx;
+      for(uint16_t j=0;j<w;++j)
+        if (src[j] != transparent)
+          dst[j]=src[j];
+      src+=SPRITE_SIZE;
+    }
+  }
+
   void Protocol::HandleDRAW_SPRITE()
   {
     const Color* pixels = get_sprite(Header.draw_sprite.id);
     if (!pixels) return;
     if (m_CursorX<SCREEN_WIDTH && m_CursorY<SCREEN_HEIGHT && 
         (m_CursorX+SPRITE_SIZE)<=SCREEN_WIDTH && (m_CursorY+SPRITE_SIZE)<=SCREEN_HEIGHT)
-        DrawSprite(pixels,0,0,SPRITE_SIZE,SPRITE_SIZE,m_CursorX,m_CursorY);
+    {
+      if (m_Transparency)
+        DrawTransparentSprite(pixels,m_Transparent,0,0,
+                              SPRITE_SIZE,SPRITE_SIZE,
+                              m_CursorX,m_CursorY);
+      else
+        DrawSprite(pixels,0,0,SPRITE_SIZE,SPRITE_SIZE,
+                   m_CursorX,m_CursorY);
+    }
     else
     {
       constexpr int16_t z=0;
@@ -350,10 +377,23 @@ namespace gpu {
       if (t<0) srct=-t;
       if (r>SCREEN_WIDTH) srcr-=(r-SCREEN_WIDTH);
       if (b>SCREEN_HEIGHT) srcb-=(b-SCREEN_HEIGHT);
-      DrawSprite(pixels,uint16_t(srcl), uint16_t(srct),
-                 uint16_t(srcr-srcl), uint16_t(srcb-srct),
-                 dstl,dstt);
+      if (m_Transparency)
+        DrawTransparentSprite(pixels,m_Transparent,
+                              uint16_t(srcl), uint16_t(srct),
+                              uint16_t(srcr-srcl), uint16_t(srcb-srct),
+                              dstl,dstt);
+      else
+        DrawSprite(pixels,
+                   uint16_t(srcl), uint16_t(srct),
+                   uint16_t(srcr-srcl), uint16_t(srcb-srct),
+                   dstl,dstt);
     }
+  }
+
+  void Protocol::HandleTRANSPARENT_COLOR()
+  {
+    m_Transparency = Header.transparent_color.enabled > 0; 
+    m_Transparent = Header.transparent_color.color;
   }
 
 
@@ -364,15 +404,8 @@ namespace gpu {
 extern "C" {
 	void procotol_main()
 	{
-    uart_println("Protocol Main");
-    uart_print("prot=");
-    uart_print_hex_dword((uint32_t)(&gpu::prot));
-    uart_println(" ");
-
-    uart_println("Init protocol");
     gpu::prot.init();
-    //uart_println("Sending CLS");
-    //gpu::prot.add_byte(gpu::CMD_CLS);
+    gpu::prot.add_byte(gpu::CMD_CLS);
 		while (true)
 		{
 			if (uart_available())

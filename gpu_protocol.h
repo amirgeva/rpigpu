@@ -26,6 +26,7 @@ namespace gpu {
   constexpr uint8_t CMD_TEXT = 30;
   constexpr uint8_t CMD_SET_SPRITE = 40;
   constexpr uint8_t CMD_DRAW_SPRITE = 41;
+  constexpr uint8_t CMD_TRANSPARENT_COLOR = 42;
 
 
 #pragma pack(push,1)
@@ -133,6 +134,13 @@ namespace gpu {
     uint16_t id;
   };
 
+  struct Command_TransparentColor
+  {
+    uint8_t  opcode;
+    uint8_t  enabled;
+    uint16_t color;
+  };
+
   class CursorStack
   {
     enum { SIZE = 32 };
@@ -168,31 +176,32 @@ namespace gpu {
     CursorStack   m_CursorStack;
     uint16_t      m_Pos, m_BytesLeft;
     uint16_t      m_CursorX, m_CursorY;
-    Color         m_FGColor, m_BGColor;
-    bool          m_Blink;
+    Color         m_FGColor, m_BGColor, m_Transparent;
+    bool          m_Transparency, m_Blink;
     typedef void (Protocol::*Handler)();
     Handler       m_Handlers[64];
     uint16_t      m_CommandSizes[64];
 
     union {
-      Command             cmd;
-      Command_CLS         cls;
-      Command_Flip        flip;
-      Command_NewLine     newline;
-      Command_PixelCursor pixel_cursor;
-      Command_TextCursor  text_cursor;
-      Command_PushCursor  push_cursor;
-      Command_PopCursor   pop_cursor;
-      Command_BlinkCursor blink_cursor;
-      Command_FillRect    fill_rect;
-      Command_HorzLine    horz_line;
-      Command_VertLine    vert_line;
-      Command_HorzPixels  horz_pixels;
-      Command_Text        text;
-      Command_FGColor     fg_color;
-      Command_BGColor     bg_color;
-      Command_SetSprite   set_sprite;
-      Command_DrawSprite  draw_sprite;
+      Command                  cmd;
+      Command_CLS              cls;
+      Command_Flip             flip;
+      Command_NewLine          newline;
+      Command_PixelCursor      pixel_cursor;
+      Command_TextCursor       text_cursor;
+      Command_PushCursor       push_cursor;
+      Command_PopCursor        pop_cursor;
+      Command_BlinkCursor      blink_cursor;
+      Command_FillRect         fill_rect;
+      Command_HorzLine         horz_line;
+      Command_VertLine         vert_line;
+      Command_HorzPixels       horz_pixels;
+      Command_Text             text;
+      Command_FGColor          fg_color;
+      Command_BGColor          bg_color;
+      Command_SetSprite        set_sprite;
+      Command_DrawSprite       draw_sprite;
+      Command_TransparentColor transparent_color;
       uint8_t             buffer[SPRITE_SIZE*SPRITE_SIZE*sizeof(Color) + sizeof(Command_SetSprite)];
     } Header;
 
@@ -200,8 +209,9 @@ namespace gpu {
 
     uint16_t check_variable_len();
 
-    void XorRect(int x, int y, int w, int h);
+    void XorRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
     void erase_cursor();
+    void draw_cursor();
     bool process_command();
 
     void HandleNOP();
@@ -222,6 +232,7 @@ namespace gpu {
     void HandleTEXT();
     void HandleSET_SPRITE();
     void HandleDRAW_SPRITE();
+    void HandleTRANSPARENT_COLOR();
 
   public:
     void init();

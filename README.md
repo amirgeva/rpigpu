@@ -26,7 +26,7 @@ On a FAT32 formatted SD Card, copy the resulting kernel.img file, and add two fi
 
 ## Connecting:
 
-On the pi-zero board, connect the uart on the three pins marked in the image below.  With regards to power, figure out what works for you (GPIO or USB).  The UART on the other side has to be configured as:  921600 N81, no handshakes.
+On the pi-zero board, connect the uart on the three pins marked in the image below.  With regards to power, figure out what works for you (GPIO or USB).  The UART on the other side has to be configured as:  460800 N81, no handshakes.
 
 ![Raspberry PI Zero UART](https://raw.githubusercontent.com/amirgeva/rpigpu/master/board.png)
 

@@ -412,6 +412,8 @@ extern "C" {
 			if (uart_available())
 			{
 				uint8_t c = uart_recv();
+                uart_print_hex(c);
+                uart_println("");
 				gpu::prot.add_byte(c);
 			}
       else

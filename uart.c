@@ -112,8 +112,8 @@ void init_uart()
     write32(AUX_MU_MCR_REG,0);
 	// Clear FIFOs
     write32(AUX_MU_IIR_REG,6);
-	// Set baud rate to 921600   Round((250000000/(8*BAUD))-1)
-    write32(AUX_MU_BAUD_REG,33);
+	// Set baud rate to 460800   Round((250000000/(8*BAUD))-1)
+    write32(AUX_MU_BAUD_REG,67);
 	
 #define GPFSEL1			0x20200004
     fsel=read32(GPFSEL1);

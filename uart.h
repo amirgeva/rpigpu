@@ -6,7 +6,7 @@ extern "C" {
 
 #include "utils.h"
 
-// Initialize UART to 921600 N81
+// Initialize UART to 460800 N81
 void init_uart();
 
 // Block and receive a single character

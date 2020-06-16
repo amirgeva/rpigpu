@@ -138,7 +138,7 @@ namespace gpu {
 
   bool Protocol::process_command()
   {
-    if (Header.cmd.opcode>=64) 
+    if (Header.cmd.opcode>=64)
     {
       return false;
     }
@@ -197,7 +197,7 @@ namespace gpu {
 
 
 
-  void Protocol::HandleNOP() 
+  void Protocol::HandleNOP()
   {
     /*
     uart_print("Cursor: ");
@@ -207,8 +207,8 @@ namespace gpu {
     uart_println(" ");
     */
   }
-  
-  void Protocol::HandleCLS() 
+
+  void Protocol::HandleCLS()
   {
     m_BGColor = 0;
     m_FGColor = 0xFFFF;
@@ -218,7 +218,7 @@ namespace gpu {
     Header.fill_rect.h = SCREEN_HEIGHT;
     HandleFILL_RECT();
   }
-  
+
   void Protocol::HandleFLIP()
   {
     if (Header.flip.double_buffer > 0)
@@ -254,7 +254,7 @@ namespace gpu {
     m_BGColor = Header.bg_color.color;
   }
 
-  void Protocol::HandlePUSH_CURSOR() 
+  void Protocol::HandlePUSH_CURSOR()
   {
     m_CursorStack.push(m_CursorX, m_CursorY);
   }
@@ -264,12 +264,12 @@ namespace gpu {
     m_CursorStack.pop(m_CursorX, m_CursorY);
   }
 
-  void Protocol::HandleBLINK_CURSOR() 
+  void Protocol::HandleBLINK_CURSOR()
   {
     m_Blink = (Header.blink_cursor.state == 1);
   }
 
-  void Protocol::HandleFILL_RECT() 
+  void Protocol::HandleFILL_RECT()
   {
     fill_rect(m_CursorX, m_CursorY,
               Header.fill_rect.w,Header.fill_rect.h,
@@ -298,8 +298,8 @@ namespace gpu {
   void Protocol::HandleTEXT()
   {
     const uint8_t* text = (&Header.text.opcode + sizeof(Command_Text));
-    draw_str(text, Header.text.n, 
-             m_CursorX, m_CursorY, 
+    draw_str(text, Header.text.n,
+             m_CursorX, m_CursorY,
              m_FGColor, m_BGColor, true);
   }
 
@@ -315,7 +315,7 @@ namespace gpu {
   }
 
   void DrawSprite(const Color* pixels,
-                  uint16_t srcx, uint16_t srcy, 
+                  uint16_t srcx, uint16_t srcy,
                   uint16_t w, uint16_t h,
                   uint16_t dstx, uint16_t dsty)
   {
@@ -330,7 +330,7 @@ namespace gpu {
   }
 
   void DrawTransparentSprite(const Color* pixels, Color transparent,
-                             uint16_t srcx, uint16_t srcy, 
+                             uint16_t srcx, uint16_t srcy,
                              uint16_t w, uint16_t h,
                              uint16_t dstx, uint16_t dsty)
   {
@@ -349,9 +349,10 @@ namespace gpu {
   {
     const Color* pixels = get_sprite(Header.draw_sprite.id);
     if (!pixels) return;
-    if (m_CursorX<SCREEN_WIDTH && m_CursorY<SCREEN_HEIGHT && 
+    if (m_CursorX<SCREEN_WIDTH && m_CursorY<SCREEN_HEIGHT &&
         (m_CursorX+SPRITE_SIZE)<=SCREEN_WIDTH && (m_CursorY+SPRITE_SIZE)<=SCREEN_HEIGHT)
     {
+      // Fully contained sprite.  Draw entire area
       if (m_Transparency)
         DrawTransparentSprite(pixels,m_Transparent,0,0,
                               SPRITE_SIZE,SPRITE_SIZE,
@@ -362,6 +363,7 @@ namespace gpu {
     }
     else
     {
+      // Partially intersecting the screen area
       constexpr int16_t z=0;
       int16_t srcl=0,srct=0,srcr=SPRITE_SIZE,srcb=SPRITE_SIZE;
       uint16_t dstl,dstt;
@@ -391,7 +393,7 @@ namespace gpu {
 
   void Protocol::HandleTRANSPARENT_COLOR()
   {
-    m_Transparency = Header.transparent_color.enabled > 0; 
+    m_Transparency = Header.transparent_color.enabled > 0;
     m_Transparent = Header.transparent_color.color;
   }
 
@@ -420,8 +422,3 @@ extern "C" {
 		}
 	}
 }
-
-
-
-
-

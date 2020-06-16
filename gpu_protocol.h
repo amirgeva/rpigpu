@@ -133,6 +133,7 @@ namespace gpu {
   {
     uint8_t  opcode;
     uint16_t id;
+    uint8_t  flags;
   };
 
   struct Command_TransparentColor

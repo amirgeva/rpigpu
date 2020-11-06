@@ -33,6 +33,18 @@ void uart_print_hex(uint8_t c);
 // Send the hex representation of these 4 bytes
 void uart_print_hex_dword(uint32_t v);
 
+
+/** Test if incoming buffer is empty */
+uint32_t uart_buffer_empty();
+
+/** Test if incoming buffer is full */
+uint32_t uart_buffer_full();
+
+/** Read from incoming FIFO queue.
+    Returns -1 if no input is available. */
+int uart_buffer_read();
+
+
 #ifdef __cplusplus
 }
 #endif

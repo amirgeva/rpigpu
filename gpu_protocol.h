@@ -11,6 +11,7 @@ namespace gpu {
   constexpr uint8_t CMD_NOP = 0;
   constexpr uint8_t CMD_CLS = 1;
   constexpr uint8_t CMD_FLIP = 2;
+  constexpr uint8_t CMD_TEST = 3;
   constexpr uint8_t CMD_TEXT_NEWLINE = 4;
   constexpr uint8_t CMD_PIXEL_CURSOR = 5;
   constexpr uint8_t CMD_TEXT_CURSOR = 6;
@@ -37,6 +38,11 @@ namespace gpu {
   };
 
   struct Command_CLS
+  {
+    uint8_t opcode;
+  };
+
+  struct Command_TEST
   {
     uint8_t opcode;
   };
@@ -187,6 +193,7 @@ namespace gpu {
     union {
       Command                  cmd;
       Command_CLS              cls;
+	  Command_TEST             test;
       Command_Flip             flip;
       Command_NewLine          newline;
       Command_PixelCursor      pixel_cursor;
@@ -217,6 +224,7 @@ namespace gpu {
 
     void HandleNOP();
     void HandleCLS();
+	void HandleTEST();
     void HandleFLIP();
     void HandleTEXT_NEWLINE();
     void HandlePIXEL_CURSOR();

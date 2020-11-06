@@ -47,6 +47,7 @@ namespace gpu {
     #define HANDLER(x) m_Handlers[CMD_##x]=&Protocol::Handle##x
     HANDLER(NOP);
     HANDLER(CLS);
+	HANDLER(TEST);
     HANDLER(FLIP);
     HANDLER(TEXT_NEWLINE);
     HANDLER(PIXEL_CURSOR);
@@ -68,6 +69,7 @@ namespace gpu {
 
     m_CommandSizes[CMD_NOP] = sizeof(Command);
     m_CommandSizes[CMD_CLS] = sizeof(Command_CLS);
+    m_CommandSizes[CMD_TEST] = sizeof(Command_TEST);
     m_CommandSizes[CMD_FLIP] = sizeof(Command_Flip);
     m_CommandSizes[CMD_TEXT_NEWLINE] = sizeof(Command_NewLine);
     m_CommandSizes[CMD_PUSH_CURSOR] = sizeof(Command_PushCursor);
@@ -138,6 +140,7 @@ namespace gpu {
 
   bool Protocol::process_command()
   {
+	//uart_println("Command");
     if (Header.cmd.opcode>=64)
     {
       return false;
@@ -216,6 +219,16 @@ namespace gpu {
     m_CursorY = 0;
     Header.fill_rect.w = SCREEN_WIDTH;
     Header.fill_rect.h = SCREEN_HEIGHT;
+    HandleFILL_RECT();
+  }
+  
+  void Protocol::HandleTEST()
+  {
+    m_BGColor = 0x1F;
+	m_CursorX=0;
+	m_CursorY=0;
+    Header.fill_rect.w = 200;
+    Header.fill_rect.h = 200;
     HandleFILL_RECT();
   }
 
@@ -308,7 +321,7 @@ namespace gpu {
     Color* ptr = get_sprite(Header.set_sprite.id);
     if (ptr)
     {
-      const Color* src = reinterpret_cast<const Color*>(&Header.set_sprite.opcode + sizeof(Command_SetSprite));
+      const Color* src = Header.set_sprite.pixels;
       for (uint16_t i = 0; i < SPRITE_AREA; ++i)
         *ptr++ = *src++;
     }
@@ -405,22 +418,23 @@ namespace gpu {
 extern "C" {
 	void procotol_main()
 	{
-    gpu::prot.init();
-    gpu::prot.add_byte(gpu::CMD_CLS);
+		gpu::prot.init();
+		gpu::prot.add_byte(gpu::CMD_CLS);
+		gpu::prot.add_byte(gpu::CMD_TEST);
 		while (true)
 		{
-			if (uart_available())
+			int c = uart_buffer_read();
+			if (c >= 0)
 			{
-				uint8_t c = uart_recv();
-                uart_print_hex(c);
-                uart_println("");
-				gpu::prot.add_byte(c);
+                //uart_print_hex(c);
+                //uart_println("");
+				gpu::prot.add_byte((uint8_t)(c&0xFF));
 			}
-      else
-      {
-        // idle: Handle cursor blink
-        gpu::prot.loop();
-      }
+			else
+			{
+				// idle: Handle cursor blink
+				gpu::prot.loop();
+			}
 		}
 	}
 }

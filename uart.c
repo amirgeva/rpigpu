@@ -3,6 +3,40 @@
 #define AUX_MU_IO_REG	0x20215040
 #define AUX_MU_LSR_REG	0x20215054
 
+#define BUFFER_MASK 4095
+volatile uint8_t uart_buffer[4096];
+volatile uint16_t write_index=0;
+volatile uint16_t read_index=0;
+
+void enable_irq();
+
+uint32_t uart_buffer_empty()
+{
+	return write_index==read_index;
+}
+
+uint32_t uart_buffer_full()
+{
+	return ((write_index+1)&BUFFER_MASK)==read_index;
+}
+
+void uart_buffer_write(uint8_t value)
+{
+	if (!uart_buffer_full())
+	{
+		uart_buffer[write_index++]=value;
+		write_index&=BUFFER_MASK;
+	}
+}
+
+int uart_buffer_read()
+{
+	if (uart_buffer_empty()) return -1;
+	uint8_t value = uart_buffer[read_index++];
+	read_index&=BUFFER_MASK;
+	return (int)value;
+}	
+
 uint8_t uart_recv()
 {
     while(1)
@@ -98,8 +132,12 @@ void init_uart()
 #define AUX_MU_MCR_REG	0x20215050
 #define AUX_MU_CNTL_REG	0x20215060
 #define AUX_MU_BAUD_REG	0x20215068
+#define DISABLE_IRQ1    0x2000B21C
+#define ENABLE_IRQ1     0x2000B210
 
     uint32_t fsel=0;
+	// Disable IRQ for init
+	write32(DISABLE_IRQ1,0x20000000);
 	// Enable mini uart
     write32(AUX_ENABLES,1);
 	// Disable interrupts
@@ -110,6 +148,8 @@ void init_uart()
     write32(AUX_MU_LCR_REG,3);
 	// Control RTS policy
     write32(AUX_MU_MCR_REG,0);
+	// Enable Interrupts
+	write32(AUX_MU_IER_REG,5);
 	// Clear FIFOs
     write32(AUX_MU_IIR_REG,6);
 	// Set baud rate to 460800   Round((250000000/(8*BAUD))-1)
@@ -128,5 +168,22 @@ void init_uart()
 	
 	// Enable Tx, Rx
     write32(AUX_MU_CNTL_REG,3);
+	// Enable IRQ after init
+	write32(ENABLE_IRQ1,0x20000000);
+	enable_irq();
 }
 
+void uart_irq_handler()
+{
+	uint32_t value;
+	while (1)
+	{
+		value = read32(AUX_MU_IIR_REG);
+		if (value & 1) break;
+		if ((value & 6) == 4)
+		{
+			value = read32(AUX_MU_IO_REG);
+			uart_buffer_write(value & 0xFF);
+		}
+	}
+}
